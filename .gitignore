@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node
+node_modules/
+
+# 构建产物
+dist/
+build/
+
+# 环境与日志
+.env
+*.log
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
