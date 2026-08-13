@@ -12,7 +12,7 @@
 
 1. 进入项目目录：
    ```bash
-   cd /root/AlphaBrainSystem/configs/behavior/COFFEE/arm-true
+   cd /home/data/robot/arm-true
    ```
 
 2. 创建本地虚拟环境（可选，但推荐）：
@@ -126,15 +126,15 @@ python3 -m unittest discover -s tests -v
 首次部署（在机器人上执行）：
 
 ```bash
-sudo mkdir -p /root/AlphaBrainSystem/configs/behavior/COFFEE
+sudo mkdir -p /home/data/robot
 git clone -b tuning --single-branch --depth 1 git@github.com:Pxiaoqi/fae.git \
-  /root/AlphaBrainSystem/configs/behavior/COFFEE/arm-true
+  /home/data/robot/arm-true
 ```
 
 日常更新（在机器人上执行）：
 
 ```bash
-cd /root/AlphaBrainSystem/configs/behavior/COFFEE/arm-true
+cd /home/data/robot/arm-true
 git pull
 ```
 
