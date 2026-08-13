@@ -12,7 +12,7 @@
 
 1. 进入项目目录：
    ```bash
-   cd /root/AlphaBrainSystem/configs/behavior/COFFEE/arm-true
+   cd /arm-true
    ```
 
 2. 创建本地虚拟环境（可选，但推荐）：
