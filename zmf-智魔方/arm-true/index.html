@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>机械臂 Web 控制台</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; }
+    .panel { background: #111827; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+    h1 { margin-top: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .btn, .input { border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+    .btn { background: #2563eb; color: white; cursor: pointer; margin: 4px; }
+    .btn.secondary { background: #475569; }
+    .btn.danger { background: #dc2626; }
+    .label { font-size: 13px; color: #94a3b8; }
+    .btn.arm-switch { background: #334155; color: #cbd5e1; min-width: 76px; }
+    .btn.arm-switch.active { background: #2563eb; color: #fff; box-shadow: inset 0 0 0 1px #93c5fd; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 112px); grid-template-rows: repeat(2, 62px); gap: 8px; margin: 12px 0; justify-content: center; }
+    .keypad .key { width: 112px; height: 62px; margin: 0; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 12px; transition: transform .08s ease; }
+    .keypad .key:hover { transform: translateY(-1px); }
+    .keypad .key:active { transform: translateY(1px) scale(.96); }
+    .keypad .key .key-glyph { font-size: 18px; line-height: 1; }
+    .keypad .key .key-label { font-size: 14px; font-weight: 700; line-height: 1.1; }
+    .keypad .key .key-axis { font-size: 11px; opacity: .85; }
+    .keypad .key.axis-x { background: #7f1d1d; border: 1px solid #f87171; }
+    .keypad .key.axis-y { background: #14532d; border: 1px solid #4ade80; }
+    .keypad .key.axis-z { background: #1e3a8a; border: 1px solid #60a5fa; }
+    .keypad-step { margin-top: 4px; font-size: 12px; color: #94a3b8; }
+    .arm-keypads { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; margin: 10px 0; }
+    .arm-keypad { background: rgba(15,23,42,.55); border: 1px solid #334155; border-radius: 12px; padding: 12px 10px; }
+    .arm-keypad-header { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #cbd5e1; }
+    .arm-keypad.left .arm-keypad-header { color: #60a5fa; }
+    .arm-keypad.right .arm-keypad-header { color: #f472b6; }
+    .hidden { display: none !important; }
+    .state-overview { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 13px; color: #cbd5e1; margin-bottom: 10px; }
+    .state-msg { color: #fbbf24; }
+    .axis-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .axis-row .axis-label { width: 58px; flex: none; font-size: 13px; color: #94a3b8; }
+    .axis-row .input { flex: 1; min-width: 0; }
+    .offset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .axis-col { display: flex; flex-direction: column; gap: 4px; }
+    .axis-col .axis-label { font-size: 13px; color: #94a3b8; }
+    .pos-readout { flex: none; font-size: 12px; color: #93c5fd; font-family: monospace; white-space: nowrap; }
+    .delta-line { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+    .error-line { font-size: 12px; color: #f87171; min-height: 14px; margin-top: 4px; }
+    .joints-live-label { font-size: 13px; color: #94a3b8; margin: 8px 0 4px; }
+    .search-hit { padding: 8px 10px; border: 1px solid #334155; border-radius: 8px; margin-top: 8px; cursor: pointer; background: #111827; }
+    .search-hit:hover { border-color: #60a5fa; }
+    .search-hit.active { border-color: #2563eb; background: #1e293b; }
+    .hit-title { font-weight: 600; color: #e2e8f0; }
+    .hit-meta { font-size: 12px; color: #94a3b8; font-weight: 400; margin-left: 6px; }
+    .hit-preview { font-size: 12px; color: #cbd5e1; margin-top: 4px; white-space: pre-wrap; word-break: break-all; }
+    mark { background: #f59e0b; color: #111827; border-radius: 2px; padding: 0 2px; }
+    .wp-label { font-size: 12px; color: #94a3b8; min-width: 90px; width: auto; display: inline-block; white-space: nowrap; }
+    #dirList { max-height: 280px; overflow-y: auto; }
+    .divider { border: none; border-top: 1px solid #334155; margin: 14px 0; }
+    .joints-readout { margin-top: 8px; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 8px; font-family: monospace; font-size: 12px; color: #93c5fd; min-height: 20px; word-break: break-all; }
+    .input { background: #1f2937; color: white; border: 1px solid #475569; width: 100%; box-sizing: border-box; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    code { background: #1f2937; padding: 2px 6px; border-radius: 6px; }
+    .status { white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 10px; margin-top: 10px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,.8); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+    .modal-card { width: min(900px, 100%); max-height: 85vh; overflow: auto; background: #111827; border: 1px solid #334155; border-radius: 16px; padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+    .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .modal-editor { width: 100%; min-height: 260px; max-height: 60vh; resize: vertical; font-family: monospace; background: #020617; color: #e2e8f0; border: 1px solid #475569; border-radius: 10px; padding: 12px; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>机械臂 Web 控制台</h1>
+    <p>可通过键盘控制末端位移，支持手动输入偏移值并一键读取当前关节。</p>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0;">Docker 配置容器</h3>
+      <span id="containerState" class="label"></span>
+    </div>
+    <div class="row">
+      <span class="label">容器</span>
+      <select id="dockerSelect" class="input" style="width: auto; min-width: 240px;">
+        <option value="">本机文件（不使用 Docker）</option>
+      </select>
+      <button class="btn secondary" id="refreshDockerBtn">刷新</button>
+    </div>
+    <p><small>切换容器后全局生效：动作调参、配置目录浏览、文件读写都会基于所选容器执行。</small></p>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0;">动作调参（approach_distance）</h3>
+      <span id="activeRobotInfo" class="label"></span>
+    </div>
+    <div class="row">
+      <span class="label">分组</span>
+      <select id="actionGroupSelect" class="input" style="width: auto; min-width: 160px;"></select>
+      <span class="label">动作</span>
+      <select id="actionSelect" class="input" style="width: auto; min-width: 280px;"></select>
+      <button class="btn" id="loadApproachBtn">载入</button>
+      <button class="btn secondary" id="refreshActionsBtn">刷新</button>
+      <button class="btn" id="addActionBtn">新增动作</button>
+    </div>
+    <div id="approachInfo" class="status" style="margin-top: 10px;">请选择动作后点击「载入」。</div>
+    <div id="waypointTable" style="margin-top: 10px;"></div>
+    <div class="row" style="margin-top: 10px;">
+      <button class="btn secondary" id="addWaypointBtn">添加行</button>
+      <button class="btn secondary" id="fillPoseBtn" style="display: none;">读取当前手臂姿态</button>
+      <button class="btn" id="saveApproachBtn">保存到 ARM.yaml</button>
+    </div>
+    <div id="searchResult" class="status" style="margin-top: 10px;"></div>
+  </div>
+
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <h3>键盘控制</h3>
+        <div class="row">
+          <span class="label">机械臂</span>
+          <button class="btn arm-switch active" id="armLeftBtn" data-arm="left">左臂</button>
+          <button class="btn arm-switch" id="armRightBtn" data-arm="right">右臂</button>
+          <span class="label">单次步长</span>
+          <select id="stepSelect" class="input" style="width: auto;">
+            <option value="0.001">1 mm</option>
+            <option value="0.005">5 mm</option>
+            <option value="0.01" selected>1 cm</option>
+            <option value="0.02">2 cm</option>
+            <option value="0.05">5 cm</option>
+          </select>
+        </div>
+        <div class="arm-keypads">
+          <div class="arm-keypad left" id="keypadPanelLeft">
+            <div class="arm-keypad-header">左臂</div>
+            <div class="keypad">
+              <button class="btn key axis-y" data-arm="left" data-key="w" data-action="move" data-axis="y" data-dir="1" style="grid-column: 2; grid-row: 1;">
+                <span class="key-glyph">↑</span>
+                <span class="key-label">W 深</span>
+                <span class="key-axis">+Y</span>
+              </button>
+              <button class="btn key axis-z" data-arm="left" data-key="a" data-action="move" data-axis="z" data-dir="1" style="grid-column: 1; grid-row: 2;">
+                <span class="key-glyph">←</span>
+                <span class="key-label">A 左</span>
+                <span class="key-axis">+Z</span>
+              </button>
+              <button class="btn key axis-y" data-arm="left" data-key="s" data-action="move" data-axis="y" data-dir="-1" style="grid-column: 2; grid-row: 2;">
+                <span class="key-glyph">↓</span>
+                <span class="key-label">S 浅</span>
+                <span class="key-axis">-Y</span>
+              </button>
+              <button class="btn key axis-z" data-arm="left" data-key="d" data-action="move" data-axis="z" data-dir="-1" style="grid-column: 3; grid-row: 2;">
+                <span class="key-glyph">→</span>
+                <span class="key-label">D 右</span>
+                <span class="key-axis">-Z</span>
+              </button>
+              <button class="btn key axis-x" data-arm="left" data-key="q" data-action="move" data-axis="x" data-dir="1" style="grid-column: 1; grid-row: 1;">
+                <span class="key-glyph">⇧</span>
+                <span class="key-label">Q 上</span>
+                <span class="key-axis">+X</span>
+              </button>
+              <button class="btn key axis-x" data-arm="left" data-key="e" data-action="move" data-axis="x" data-dir="-1" style="grid-column: 3; grid-row: 1;">
+                <span class="key-glyph">⇩</span>
+                <span class="key-label">E 下</span>
+                <span class="key-axis">-X</span>
+              </button>
+            </div>
+            <div class="keypad-step">步长：X 0.01 / Y 0.01 / Z 0.01 m（可在下方手动偏移输入中调整）</div>
+          </div>
+          <div class="arm-keypad right hidden" id="keypadPanelRight">
+            <div class="arm-keypad-header">右臂</div>
+            <div class="keypad">
+              <button class="btn key axis-y" data-arm="right" data-key="w" data-action="move" data-axis="y" data-dir="1" style="grid-column: 2; grid-row: 1;">
+                <span class="key-glyph">↑</span>
+                <span class="key-label">W 深</span>
+                <span class="key-axis">+Y</span>
+              </button>
+              <button class="btn key axis-z" data-arm="right" data-key="a" data-action="move" data-axis="z" data-dir="1" style="grid-column: 1; grid-row: 2;">
+                <span class="key-glyph">←</span>
+                <span class="key-label">A 左</span>
+                <span class="key-axis">+Z</span>
+              </button>
+              <button class="btn key axis-y" data-arm="right" data-key="s" data-action="move" data-axis="y" data-dir="-1" style="grid-column: 2; grid-row: 2;">
+                <span class="key-glyph">↓</span>
+                <span class="key-label">S 浅</span>
+                <span class="key-axis">-Y</span>
+              </button>
+              <button class="btn key axis-z" data-arm="right" data-key="d" data-action="move" data-axis="z" data-dir="-1" style="grid-column: 3; grid-row: 2;">
+                <span class="key-glyph">→</span>
+                <span class="key-label">D 右</span>
+                <span class="key-axis">-Z</span>
+              </button>
+              <button class="btn key axis-x" data-arm="right" data-key="q" data-action="move" data-axis="x" data-dir="1" style="grid-column: 1; grid-row: 1;">
+                <span class="key-glyph">⇧</span>
+                <span class="key-label">Q 上</span>
+                <span class="key-axis">+X</span>
+              </button>
+              <button class="btn key axis-x" data-arm="right" data-key="e" data-action="move" data-axis="x" data-dir="-1" style="grid-column: 3; grid-row: 1;">
+                <span class="key-glyph">⇩</span>
+                <span class="key-label">E 下</span>
+                <span class="key-axis">-X</span>
+              </button>
+            </div>
+            <div class="keypad-step">步长：X 0.01 / Y 0.01 / Z 0.01 m（可在下方手动偏移输入中调整）</div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn secondary" id="resetBtn">R 复位</button>
+          <button class="btn danger" id="stopBtn">Space 急停</button>
+        </div>
+        <p><small>提示：页面已绑定键盘事件，W/S/A/D/Q/E 可直接控制。</small></p>
+      </div>
+
+      <div>
+        <h3>手动偏移输入</h3>
+        <h4>偏移设置</h4>
+        <div class="state-overview">
+          <span id="armStateLine">机械臂: - | 连接: - | 模拟: -</span>
+          <span id="stateMsg" class="state-msg"></span>
+        </div>
+        <div class="offset-grid">
+          <div class="axis-col">
+            <span class="axis-label">偏移 Y</span>
+            <input class="input" id="dy" type="number" value="0.00" step="0.001" />
+          </div>
+          <div class="axis-col">
+            <span class="axis-label">偏移 Z</span>
+            <input class="input" id="dz" type="number" value="0.00" step="0.001" />
+          </div>
+          <div class="axis-col">
+            <span class="axis-label">偏移 X</span>
+            <input class="input" id="dx" type="number" value="0.00" step="0.001" />
+          </div>
+        </div>
+        <label>速度</label>
+        <input class="input" id="speed" type="number" value="10" step="1" />
+        <div class="row" style="margin-top: 10px;">
+          <button class="btn" id="applyOffsetBtn">应用偏移</button>
+        </div>
+        <p><small>偏移输入框显示的是当前相对初始点的偏移；点击「应用偏移」将移动到输入框所示的目标偏移（不会再次叠加）。</small></p>
+        <div id="errorLine" class="error-line"></div>
+        <hr class="divider" />
+        <h4>关节读取</h4>
+        <div class="row">
+          <button class="btn secondary" id="getJointsBtn">⟳ 获取关节</button>
+          <button class="btn" id="copyJointsBtn">复制关节</button>
+        </div>
+        <div class="joints-live-label">实时显示关节:</div>
+        <div id="jointsReadout" class="joints-readout">未获取</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>配置目录浏览</h3>
+    <div class="row">
+      <button class="btn secondary" id="backDirBtn">上一级</button>
+      <button class="btn" id="refreshDirBtn">刷新目录</button>
+    </div>
+    <div class="row" style="margin-top: 8px;">
+      <input class="input" id="dirPathInput" value="/root/AlphaBrainSystem/configs/behavior/COFFEE" />
+      <button class="btn" id="openDirBtn">打开目录</button>
+    </div>
+    <div id="dirList" class="status" style="margin-top: 10px;">正在加载目录...</div>
+  </div>
+
+  <div id="fileModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <h3 id="modalTitle" style="margin: 0;">文件内容</h3>
+        <button class="btn secondary" id="closeModalBtn">关闭</button>
+      </div>
+      <textarea id="modalEditor" class="modal-editor" style="margin-top: 10px;"></textarea>
+      <div class="modal-actions">
+        <button class="btn" id="saveModalBtn">保存当前文件</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="actionModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="width: min(560px, 100%);">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">动作列表管理（arm_actions.json）</h3>
+        <button class="btn secondary" id="actionModalCloseBtn">关闭</button>
+      </div>
+      <div style="margin-top: 12px;">
+        <div class="row">
+          <span class="label">分组</span>
+          <select id="newActionGroup" class="input" style="flex: 1; min-width: 160px;"></select>
+        </div>
+        <div class="row" style="margin-top: 6px;">
+          <input class="input" id="newActionKey" placeholder="动作名(node_name)，如 move_left_arm_to_place_cup_B" style="flex: 2; min-width: 180px;" />
+        </div>
+        <div class="row" style="margin-top: 6px;">
+          <input class="input" id="newActionName" placeholder="中文翻译，如 放杯 B" style="flex: 2; min-width: 180px;" />
+        </div>
+        <div class="row" style="margin-top: 6px;">
+          <span class="label">参数</span>
+          <select id="newActionParam" class="input" style="width: auto;">
+            <option value="approach_distance">approach_distance</option>
+            <option value="left">left</option>
+            <option value="right">right</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <button class="btn" id="actionModalAddBtn">添加</button>
+        </div>
+      </div>
+      <div id="actionList" style="margin-top: 12px; max-height: 45vh; overflow: auto;"></div>
+    </div>
+  </div>
+
+  <div id="warnModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="width: min(480px, 100%); border: 1px solid #dc2626;">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; color: #f87171;">⚠️ 提示</h3>
+        <button class="btn secondary" id="warnCloseBtn">关闭</button>
+      </div>
+      <div id="warnMsg" style="margin-top: 12px; white-space: pre-wrap; line-height: 1.6;"></div>
+    </div>
+  </div>
+
+  <script>
+    const moveButtons = document.querySelectorAll('[data-action="move"]');
+    const dirListBox = document.getElementById('dirList');
+    const searchResultBox = document.getElementById('searchResult');
+    const modalBackdrop = document.getElementById('fileModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalEditor = document.getElementById('modalEditor');
+    let currentDir = '/root/AlphaBrainSystem/configs/behavior/COFFEE';
+    let activeModalPath = null;
+    let currentArm = 'left';
+    let currentContainer = '';
+    let busy = false;
+
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function setInputValue(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    }
+
+    // 按键移动速度取“速度”输入框，默认 10
+    function currentSpeed() {
+      return Number(document.getElementById('speed').value || 10);
+    }
+
+    function showWarning(message) {
+      setText('warnMsg', message || '移动未执行');
+      const modal = document.getElementById('warnModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+
+    // 关节角度数组格式，保留 5 位小数
+    function formatJoints(joints) {
+      return '[' + (joints || []).map(v => Number(v).toFixed(5)).join(', ') + ']';
+    }
+
+    async function requestJson(url, options = {}) {
+      try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        return data;
+      } catch (e) {
+        console.error('requestJson error', e);
+        return { ok: false, error: String(e) };
+      }
+    }
+
+    async function moveArm(dx, dy, dz, speed = 20, arm) {
+      if (busy) return;
+      const targetArm = arm || currentArm;
+      setBusy(true);
+      try {
+        const result = await requestJson('/api/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ arm: targetArm, dx, dy, dz, speed })
+        });
+        renderState(result.state);
+        if (result.ok === false) {
+          showWarning((result.state && result.state.error) || result.error || '移动未执行');
+        } else if (result.state && result.state.warning) {
+          showWarning(result.state.warning);
+        }
+        return result;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshState() {
+      const data = await requestJson(`/api/status?arm=${encodeURIComponent(currentArm)}`);
+      renderState(data);
+    }
+
+    function setBusy(flag, message) {
+      busy = !!flag;
+      const controls = [];
+      moveButtons.forEach(b => controls.push(b));
+      ['applyOffsetBtn','getJointsBtn','copyJointsBtn','resetBtn','stopBtn','armLeftBtn','armRightBtn','stepSelect'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) controls.push(el);
+      });
+      controls.forEach(el => { try { el.disabled = busy; } catch(e){} });
+      if (busy) {
+        setText('stateMsg', message || '移动中...');
+      } else {
+        setText('stateMsg', '');
+        refreshState();
+      }
+    }
+
+    // 渲染状态数据到偏移设置模块（包含异常安全处理）
+    function renderState(state) {
+      if (!state) {
+        setText('armStateLine', '机械臂: - | 连接: - | 模拟: -');
+        setText('errorLine', '无状态');
+        return;
+      }
+      if (state.ok === false && state.error) {
+        setText('armStateLine', '机械臂: - | 连接: - | 模拟: -');
+        setText('errorLine', `无法获取状态: ${state.error}`);
+        return;
+      }
+      // 状态/偏移显示统一为物理坐标（X=上/下、Y=深/浅、Z=左/右），与按键方向一致；
+      // 右臂 Y/Z 的镜像换算由后端 arm_controller.move/get_state 处理，前端左右臂逻辑一致
+      const view = { ...state };
+      setText('armStateLine', `机械臂: ${currentArm === 'right' ? '右臂' : '左臂'} | 连接: ${view.connected ? '已连接' : '未连接'} | 模拟: ${view.simulate ? '是' : '否'}`);
+      // 输入框同步显示当前位置（相对初始点的偏移），按键后自动更新
+      const delta = view.delta || [];
+      window.currentDelta = delta;
+      setInputValue('dx', delta.length > 0 ? Number(delta[0]).toFixed(3) : '0.00');
+      setInputValue('dy', delta.length > 1 ? Number(delta[1]).toFixed(3) : '0.00');
+      setInputValue('dz', delta.length > 2 ? Number(delta[2]).toFixed(3) : '0.00');
+      const warns = [view.error, view.warning].filter(Boolean).join(' | ');
+      setText('errorLine', warns ? `错误: ${warns}` : '');
+      window.currentJoints = view.joints || [];
+      // 实时显示关节：每次状态刷新时同步更新
+      const joints = view.joints || [];
+      const readout = document.getElementById('jointsReadout');
+      if (readout && joints.length) {
+        readout.textContent = formatJoints(joints);
+      }
+    }
+
+    function containerParam() {
+      // 本机文件用显式哨兵 __local__，后端据此绕过环境变量默认容器
+      return currentContainer || '__local__';
+    }
+
+    function containerQuery() {
+      return `container=${encodeURIComponent(containerParam())}`;
+    }
+
+    function renderContainerState() {
+      const el = document.getElementById('containerState');
+      if (!el) return;
+      el.textContent = currentContainer
+        ? `当前生效：${currentContainer}（容器内）`
+        : '当前生效：本机文件';
+    }
+
+    async function loadDockerContainers() {
+      const data = await requestJson('/api/docker/containers');
+      const select = document.getElementById('dockerSelect');
+      select.replaceChildren();
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = '本机文件（不使用 Docker）';
+      select.appendChild(empty);
+      (data.containers || []).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      // 优先使用上次选择的容器，其次使用服务默认容器
+      const saved = localStorage.getItem('arm_docker_container') || '';
+      const has = v => v && [...select.options].some(o => o.value === v);
+      const target = has(saved) ? saved : has(data.default) ? data.default : '';
+      select.value = target;
+      currentContainer = select.value;
+      renderContainerState();
+    }
+
+    // ---------- 动作调参（arm_actions.json 配置驱动） ----------
+    let actionTree = [];
+    let actionConfig = {};
+    let currentActionId = '';
+    let currentActionMeta = null;
+    let currentRows = [];
+
+    function selectedGroup() {
+      const key = document.getElementById('actionGroupSelect').value;
+      const [mi, gi] = (key || '_').split('_').map(Number);
+      const dev = actionTree[mi];
+      return (dev && dev.stages && dev.stages[gi]) || null;
+    }
+
+    function fillActionSelect() {
+      const select = document.getElementById('actionSelect');
+      const prev = select.value;
+      const grp = selectedGroup();
+      select.replaceChildren();
+      (grp ? grp.actions || [] : []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        const occ = Number(a.occurrence || 1) > 1 ? ` #${a.occurrence}` : '';
+        opt.textContent = `${a.label}（${a.node} / ${a.param}${occ}）`;
+        select.appendChild(opt);
+      });
+      // 优先恢复缓存的动作选择；缓存无效时保留当前选择
+      const savedAction = localStorage.getItem('arm_action_id') || '';
+      const target = (savedAction && [...select.options].some(o => o.value === savedAction))
+        ? savedAction
+        : prev;
+      if (target && [...select.options].some(o => o.value === target)) {
+        select.value = target;
+      }
+    }
+
+    async function loadActionOptions() {
+      const q = containerQuery();
+      const data = await requestJson(`/api/actions${q ? '?' + q : ''}`);
+      actionTree = data.tree || [];
+      actionConfig = data.config || {};
+      const robot = data.active_robot || {};
+      const infoEl = document.getElementById('activeRobotInfo');
+      if (infoEl) {
+        if (robot.ok) {
+          infoEl.textContent = actionTree.length
+            ? `当前机器人：${robot.label || robot.value}（${robot.value}）`
+            : `当前机器人：${robot.label || robot.value}（${robot.value}）· 暂无动作配置`;
+        } else {
+          infoEl.textContent = robot.value
+            ? `当前机器人：${robot.value}（未匹配到动作配置）`
+            : `未读取到 active_behavior_tree（${robot.error || '未知原因'}）· 显示全部分组`;
+        }
+      }
+      const groupSelect = document.getElementById('actionGroupSelect');
+      const prevGroup = groupSelect.value;
+      groupSelect.replaceChildren();
+      actionTree.forEach((dev, mi) => (dev.stages || []).forEach((grp, gi) => {
+        const opt = document.createElement('option');
+        opt.value = `${mi}_${gi}`;
+        opt.textContent = `${dev.label || ''} / ${grp.label || ''}`;
+        groupSelect.appendChild(opt);
+      }));
+      if (!actionTree.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '当前机器人暂无动作配置';
+        groupSelect.appendChild(opt);
+      }
+      // 优先恢复缓存的分组（设备::阶段 稳定标识），缓存无效时保留当前选择
+      const savedGroup = localStorage.getItem('arm_action_group') || '';
+      let targetGroup = '';
+      if (savedGroup) {
+        actionTree.forEach((dev, mi) => (dev.stages || []).forEach((grp, gi) => {
+          if (targetGroup) return;
+          if (`${dev.id}::${grp.label}` === savedGroup) {
+            targetGroup = `${mi}_${gi}`;
+          }
+        }));
+      }
+      if (!targetGroup && prevGroup && [...groupSelect.options].some(o => o.value === prevGroup)) {
+        targetGroup = prevGroup;
+      }
+      if (targetGroup && [...groupSelect.options].some(o => o.value === targetGroup)) {
+        groupSelect.value = targetGroup;
+      }
+      fillActionSelect();
+      currentActionId = document.getElementById('actionSelect').value;
+      // 已载入的动作不在当前机器人分组中时，清除旧选择
+      if (currentActionId && ![...document.getElementById('actionSelect').options].some(o => o.value === currentActionId)) {
+        currentActionId = '';
+        currentActionMeta = null;
+        currentRows = [];
+        document.getElementById('approachInfo').textContent = '请选择动作后点击「载入」。';
+        document.getElementById('waypointTable').replaceChildren();
+        document.getElementById('fillPoseBtn').style.display = 'none';
+      }
+    }
+
+    async function loadActionList() {
+      const q = containerQuery();
+      const data = await requestJson(`/api/actions${q ? '?' + q : ''}`);
+      const box = document.getElementById('actionList');
+      box.replaceChildren();
+      let count = 0;
+      const tree = data.tree || [];
+      const cfg = data.config || {};
+      tree.forEach(dev => (dev.stages || []).forEach(grp => {
+        (grp.actions || []).forEach(a => {
+          count += 1;
+          const row = document.createElement('div');
+          row.className = 'search-hit';
+          const t = document.createElement('div');
+          t.className = 'hit-title';
+          t.innerHTML = `${escapeHtml(a.label || a.id)} <span class="hit-meta">${escapeHtml(dev.label || '')} / ${escapeHtml(grp.label || '')} · ${escapeHtml(a.node || '')}</span>`;
+          const del = document.createElement('button');
+          del.className = 'btn danger';
+          del.style.marginTop = '4px';
+          del.textContent = '删除';
+          del.addEventListener('click', async () => {
+            // 在原始配置中删除 (node, param) 的第 occurrence 条
+            const cq = containerQuery();
+            const cfg2 = (await requestJson(`/api/actions${cq ? '?' + cq : ''}`)).config || {};
+            let seen = 0;
+            let removed = false;
+            const stages = (cfg2[dev.id] || {}).stages || {};
+            for (const stageLabel of Object.keys(stages)) {
+              const acts = stages[stageLabel] || [];
+              for (let i = 0; i < acts.length && !removed; i++) {
+                if (String(acts[i].node) === a.node && String(acts[i].param) === a.param) {
+                  seen += 1;
+                  if (seen === Number(a.occurrence || 1)) {
+                    acts.splice(i, 1);
+                    removed = true;
+                  }
+                }
+              }
+              if (removed) break;
+            }
+            const res = await requestJson('/api/actions/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ config: cfg2 })
+            });
+            if (res.ok) {
+              await loadActionOptions();
+              await loadActionList();
+            } else {
+              showWarning(`删除失败: ${res.error}`);
+            }
+          });
+          row.appendChild(t);
+          row.appendChild(del);
+          box.appendChild(row);
+        });
+      }));
+      const title = document.createElement('div');
+      title.innerHTML = `<strong>${count} 个动作</strong>`;
+      box.prepend(title);
+    }
+
+    function actionValueCount() {
+      const act = currentActionMeta || {};
+      return Number(act.value_count || 3);
+    }
+
+    function readWaypointRow(row) {
+      const count = actionValueCount();
+      const values = [];
+      for (let i = 0; i < count; i++) {
+        const el = row.querySelector('.wp-' + i);
+        values.push(Number(el ? el.value : 0) || 0);
+      }
+      return values;
+    }
+
+    function renderWaypoints(rows) {
+      const box = document.getElementById('waypointTable');
+      box.replaceChildren();
+      const act = currentActionMeta || {};
+      const labels = act.value_labels || ['x', 'y', 'z'];
+      const rowGroups = act.row_groups || [];
+      const head = document.createElement('div');
+      head.className = 'row';
+      ['#', ...labels].forEach(label => {
+        const s = document.createElement('span');
+        s.className = 'wp-label';
+        s.textContent = label;
+        head.appendChild(s);
+      });
+      box.appendChild(head);
+      (rows || []).forEach((row, idx) => {
+        const group = rowGroups.find(g => Number(g.start) === idx);
+        if (group) {
+          const g = document.createElement('div');
+          g.className = 'row wp-group';
+          g.style.marginTop = '8px';
+          g.innerHTML = `<span class="wp-group-label">${escapeHtml(group.label || '')}（行 ${group.start + 1} - ${group.start + group.count}）</span>`;
+          box.appendChild(g);
+        }
+        const rowEl = document.createElement('div');
+        rowEl.className = 'row wp-row';
+        rowEl.style.marginTop = '6px';
+        const num = document.createElement('span');
+        num.className = 'wp-label';
+        num.textContent = `#${idx + 1}`;
+        rowEl.appendChild(num);
+        labels.forEach((_, ai) => {
+          const input = document.createElement('input');
+          input.className = 'input wp-' + ai;
+          input.type = 'number';
+          input.step = '0.001';
+          input.style.width = '90px';
+          input.value = row[ai] !== undefined ? row[ai] : 0;
+          rowEl.appendChild(input);
+        });
+        const count = actionValueCount();
+        if (count === 3) {
+          // 偏移量：动作 X/Y/Z 与手动偏移的 偏移Y/Z/X 相加（输入框不改动）
+          const btn = document.createElement('button');
+          btn.className = 'btn secondary';
+          btn.textContent = '偏移';
+          btn.title = '将该行与手动偏移相加（X+偏移Y, Y+偏移Z, Z+偏移X）';
+          btn.addEventListener('click', () => {
+            const values = readWaypointRow(rowEl);
+            const dy = Number(document.getElementById('dy').value || 0);
+            const dz = Number(document.getElementById('dz').value || 0);
+            const dx = Number(document.getElementById('dx').value || 0);
+            const merged = [values[0] + dy, values[1] + dz, values[2] + dx];
+            rowEl.querySelectorAll('input').forEach((el, i) => {
+              if (merged[i] !== undefined) el.value = Number(merged[i]).toFixed(3);
+            });
+            searchResultBox.textContent =
+              `已合并手动偏移: X=${merged[0].toFixed(3)} Y=${merged[1].toFixed(3)} Z=${merged[2].toFixed(3)}（手动偏移输入未改动）`;
+          });
+          rowEl.appendChild(btn);
+        } else if (count === 7) {
+          // 关节角度：用对应手臂当前关节角替换该行
+          const btn = document.createElement('button');
+          btn.className = 'btn secondary';
+          btn.textContent = '应用当前关节';
+          btn.title = '用当前手臂关节角替换该行';
+          btn.addEventListener('click', async () => {
+            const arm = currentActionMeta.param === 'right' ? 'right' : 'left';
+            const data = await requestJson(`/api/status?arm=${encodeURIComponent(arm)}`);
+            const joints = data.joints || [];
+            if (!joints.length) {
+              showWarning('获取当前姿态失败');
+              return;
+            }
+            const inputs = rowEl.querySelectorAll('input');
+            inputs.forEach((el, i) => { if (i < joints.length) el.value = joints[i]; });
+            searchResultBox.textContent = `已将${arm === 'right' ? '右臂' : '左臂'}当前关节角应用到第 ${idx + 1} 行`;
+          });
+          rowEl.appendChild(btn);
+        } else {
+          // 标量等其它类型：保留删除
+          const del = document.createElement('button');
+          del.className = 'btn danger';
+          del.textContent = '删除';
+          del.addEventListener('click', () => {
+            const values = [...document.querySelectorAll('#waypointTable .wp-row')].map(readWaypointRow);
+            values.splice(idx, 1);
+            renderWaypoints(values);
+          });
+          rowEl.appendChild(del);
+        }
+        box.appendChild(rowEl);
+      });
+    }
+
+    async function loadApproach() {
+      const id = document.getElementById('actionSelect').value;
+      if (!id) {
+        showWarning('请先选择动作');
+        return false;
+      }
+      currentActionId = id;
+      const q = containerQuery();
+      const data = await requestJson(`/api/actions/approach?id=${encodeURIComponent(id)}${q ? '&' + q : ''}`);
+      if (!data.ok) {
+        showWarning(`载入失败: ${data.error}`);
+        return false;
+      }
+      currentActionMeta = Object.assign({}, data.action || {}, {
+        value_count: data.value_count || 3,
+        value_labels: data.value_labels || ['x', 'y', 'z']
+      });
+      currentRows = data.rows || [];
+      const act = currentActionMeta;
+      const occ = Number(act.occurrence || 1) > 1 ? `（第 ${act.occurrence} 处）` : '';
+      const isJointAngles = Number(act.value_count) === 7 && (act.param === 'left' || act.param === 'right');
+      const armLabel = act.param === 'right' ? '右臂' : '左臂';
+      const paramDesc = (act.param === 'left' || act.param === 'right')
+        ? (isJointAngles ? `${armLabel}关节角度` : `${armLabel}位移`)
+        : act.param;
+      document.getElementById('approachInfo').textContent =
+        `节点: ${act.node} | 参数: ${paramDesc}${occ} | 每行 ${act.value_count} 个值 | 起始行: ${data.line}`;
+      const fillBtn = document.getElementById('fillPoseBtn');
+      fillBtn.style.display = isJointAngles ? 'inline-block' : 'none';
+      fillBtn.textContent = `读取当前${armLabel}姿态`;
+      renderWaypoints(currentRows);
+      return true;
+    }
+
+    async function applyActionPause(id) {
+      if (!id) return;
+      const res = await requestJson('/api/actions/pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, container: containerParam() })
+      });
+      if (res.ok) {
+        searchResultBox.textContent = `已添加 120s 暂停：${res.template} 第 ${res.line} 行`;
+      } else {
+        showWarning(`添加 120s 暂停失败: ${res.error}`);
+      }
+    }
+
+    async function saveApproach() {
+      if (!currentActionId) {
+        showWarning('请先载入动作');
+        return;
+      }
+      const rows = [...document.querySelectorAll('#waypointTable .wp-row')].map(readWaypointRow);
+      if (!rows.length) {
+        showWarning('至少需要一行数据');
+        return;
+      }
+      const res = await requestJson('/api/actions/approach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentActionId, waypoints: rows, container: containerParam() })
+      });
+      if (res.ok) {
+        currentRows = res.rows || rows;
+        renderWaypoints(currentRows);
+        document.getElementById('approachInfo').textContent += '  ✅ 已保存';
+        searchResultBox.textContent = `已保存 ${currentActionId} 的参数值`;
+      } else {
+        showWarning(`保存失败: ${res.error}`);
+      }
+    }
+
+    async function fillPose() {
+      const act = currentActionMeta || {};
+      const arm = act.param === 'right' ? 'right' : 'left';
+      const data = await requestJson(`/api/status?arm=${encodeURIComponent(arm)}`);
+      const joints = data.joints || [];
+      if (!joints.length) {
+        showWarning('获取当前姿态失败');
+        return;
+      }
+      let rows = [...document.querySelectorAll('#waypointTable .wp-row')].map(readWaypointRow);
+      rows.forEach(row => joints.forEach((v, i) => { if (row[i] !== undefined) row[i] = v; }));
+      if (!rows.length) {
+        rows = [joints.slice()];
+      }
+      renderWaypoints(rows);
+      searchResultBox.textContent = `已读取 ${arm} 当前关节姿态并填入`;
+    }
+
+    async function addAction() {
+      const key = document.getElementById('newActionKey').value.trim();
+      const name = document.getElementById('newActionName').value.trim();
+      const grpKey = document.getElementById('newActionGroup').value;
+      if (!key) {
+        showWarning('请填写动作名');
+        return;
+      }
+      if (!grpKey) {
+        showWarning('请先选择分组');
+        return;
+      }
+      const [mi, gi] = grpKey.split('_').map(Number);
+      const cq = containerQuery();
+      const data = await requestJson(`/api/actions${cq ? '?' + cq : ''}`);
+      const tree = data.tree || [];
+      const cfg = data.config || {};
+      const dev = tree[mi];
+      const stage = dev && dev.stages ? dev.stages[gi] : null;
+      if (!dev || !stage) {
+        showWarning('分组不存在');
+        return;
+      }
+      const param = document.getElementById('newActionParam').value;
+      const devCfg = cfg[dev.id] || {};
+      const stageCfg = (devCfg.stages || {})[stage.label] || [];
+      stageCfg.push({ action: name || key, node: key, param });
+      devCfg.stages = devCfg.stages || {};
+      devCfg.stages[stage.label] = stageCfg;
+      cfg[dev.id] = devCfg;
+      const res = await requestJson('/api/actions/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: cfg })
+      });
+      if (res.ok) {
+        document.getElementById('newActionKey').value = '';
+        document.getElementById('newActionName').value = '';
+        await loadActionOptions();
+        await loadActionList();
+        document.getElementById('actionGroupSelect').value = grpKey;
+        fillActionSelect();
+        const last = [...document.getElementById('actionSelect').options].slice(-1)[0];
+        if (last) document.getElementById('actionSelect').value = last.value;
+      } else {
+        showWarning(`添加失败: ${res.error}`);
+      }
+    }
+
+    async function loadDirectory(path = currentDir) {
+      currentDir = path;
+      document.getElementById('dirPathInput').value = currentDir;
+      const q = containerQuery();
+      const data = await requestJson(`/api/config/dir?path=${encodeURIComponent(currentDir)}${q ? '&' + q : ''}`);
+      if (data.error) {
+        dirListBox.textContent = `无法读取目录: ${data.error}`;
+        return;
+      }
+      const container = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = '目录内容';
+      container.appendChild(title);
+      if (!data.entries || !data.entries.length) {
+        const emptyHint = document.createElement('div');
+        emptyHint.textContent = '当前目录为空';
+        emptyHint.style.marginTop = '8px';
+        container.appendChild(emptyHint);
+      }
+      data.entries.forEach(entry => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.style.marginTop = '4px';
+        row.style.cursor = 'pointer';
+        row.style.display = 'block';
+        row.style.width = '100%';
+        row.style.textAlign = 'left';
+        row.style.background = '#1f2937';
+        row.style.color = '#e2e8f0';
+        row.style.border = '1px solid #475569';
+        row.style.borderRadius = '8px';
+        row.style.padding = '8px 10px';
+        row.textContent = `${entry.is_dir ? '📁' : '📄'} ${entry.name}`;
+        row.addEventListener('click', () => {
+          searchResultBox.textContent = `点击了: ${entry.name}`;
+          if (entry.is_dir) {
+            loadDirectory(entry.path);
+          } else {
+            openConfigFile(entry.path);
+          }
+        });
+        container.appendChild(row);
+      });
+      dirListBox.replaceChildren(container);
+    }
+
+    async function openConfigFile(path) {
+      const q = containerQuery();
+      const data = await requestJson(`/api/config/file?path=${encodeURIComponent(path)}${q ? '&' + q : ''}`);
+      if (!data.ok) {
+        searchResultBox.textContent = `读取文件失败: ${data.error}`;
+        return;
+      }
+      showFilePreview(path, data.content);
+      searchResultBox.textContent = `已读取文件: ${data.path}`;
+    }
+
+    function showFilePreview(path, content) {
+      activeModalPath = path;
+      modalTitle.textContent = path;
+      modalEditor.value = content;
+      modalBackdrop.style.display = 'flex';
+    }
+
+    function closeFilePreview() {
+      modalBackdrop.style.display = 'none';
+      activeModalPath = null;
+    }
+
+    window.openDirectory = function(path) {
+      loadDirectory(path);
+    };
+
+    window.openFile = function(path) {
+      openConfigFile(path);
+    };
+
+    function readOffsetInputs() {
+      return {
+        dx: Number(document.getElementById('dx').value || 0),
+        dy: Number(document.getElementById('dy').value || 0),
+        dz: Number(document.getElementById('dz').value || 0)
+      };
+    }
+
+    // 按键移动量取“单次步长”选择器，输入框用于显示当前位置（相对偏移）
+    function offsetForAxis(axis, dir) {
+      const step = Number(document.getElementById('stepSelect').value || 0.01);
+      return {
+        dx: axis === 'x' ? dir * step : 0,
+        dy: axis === 'y' ? dir * step : 0,
+        dz: axis === 'z' ? dir * step : 0
+      };
+    }
+
+    function updateKeypadStep() {
+      const step = Number(document.getElementById('stepSelect').value || 0.01);
+      const fmt = v => String(Math.round(v * 1000) / 1000);
+      document.querySelectorAll('.keypad-step').forEach(el => {
+        el.textContent = `步长：${fmt(step)} m（可在下方手动偏移输入中调整）`;
+      });
+    }
+
+    // 按钮方向直接对应“物理坐标”轴（深/浅 → Y、左/右 → Z、上/下 → X）；
+    // 右臂 Y/Z 镜像由后端 arm_controller.move 换算，前端发送前无需额外轴映射
+    function labelToProtocol(offset) {
+      return { dx: offset.dx, dy: offset.dy, dz: offset.dz };
+    }
+
+    // 左右臂按键逻辑一致（W:+Y、S:-Y、A:+Z、D:-Z、Q:+X、E:-X）；
+    // 右臂物理坐标下的镜像换算在后端完成，前端无需区分左右臂
+    const ARM_BINDINGS = {
+      left: {
+        w: { axis: 'y', dir: 1 },   // 深 +Y
+        s: { axis: 'y', dir: -1 },  // 浅 -Y
+        a: { axis: 'z', dir: 1 },   // 左 +Z
+        d: { axis: 'z', dir: -1 },  // 右 -Z
+        q: { axis: 'x', dir: 1 },   // 上 +X
+        e: { axis: 'x', dir: -1 }   // 下 -X
+      },
+      right: {
+        w: { axis: 'y', dir: 1 },   // 深 +Y
+        s: { axis: 'y', dir: -1 },  // 浅 -Y
+        a: { axis: 'z', dir: 1 },   // 左 +Z
+        d: { axis: 'z', dir: -1 },  // 右 -Z
+        q: { axis: 'x', dir: 1 },   // 上 +X
+        e: { axis: 'x', dir: -1 }   // 下 -X
+      }
+    };
+
+    moveButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const arm = btn.dataset.arm || currentArm;
+        const d = labelToProtocol(offsetForAxis(btn.dataset.axis, Number(btn.dataset.dir) || 1));
+        moveArm(d.dx, d.dy, d.dz, currentSpeed(), arm);
+      });
+    });
+
+    ['dx', 'dy', 'dz'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateKeypadStep);
+    });
+    document.getElementById('stepSelect').addEventListener('change', (e) => {
+      // 步长选择只影响按键移动量，不改写位置显示
+      updateKeypadStep();
+    });
+    updateKeypadStep();
+
+    document.getElementById('applyOffsetBtn').addEventListener('click', () => {
+      if (busy) return;
+      const dx = Number(document.getElementById('dx').value || 0);
+      const dy = Number(document.getElementById('dy').value || 0);
+      const dz = Number(document.getElementById('dz').value || 0);
+      const speed = Number(document.getElementById('speed').value || 20);
+      // 输入框显示的是“相对初始点的目标偏移”，这里只发所需增量，避免重复叠加
+      const cur = window.currentDelta || [0, 0, 0];
+      const d = labelToProtocol({ dx: dx - cur[0], dy: dy - cur[1], dz: dz - cur[2] });
+      moveArm(d.dx, d.dy, d.dz, speed);
+    });
+
+    function setActiveArm(arm) {
+      currentArm = arm;
+      document.getElementById('armLeftBtn').classList.toggle('active', arm === 'left');
+      document.getElementById('armRightBtn').classList.toggle('active', arm === 'right');
+      document.getElementById('keypadPanelLeft').classList.toggle('hidden', arm !== 'left');
+      document.getElementById('keypadPanelRight').classList.toggle('hidden', arm !== 'right');
+    }
+    document.getElementById('armLeftBtn').addEventListener('click', () => {
+      if (busy || currentArm === 'left') return;
+      setActiveArm('left');
+      refreshState();
+    });
+    document.getElementById('armRightBtn').addEventListener('click', () => {
+      if (busy || currentArm === 'right') return;
+      setActiveArm('right');
+      refreshState();
+    });
+
+    // 初始显示左臂键盘
+    setActiveArm('left');
+
+    document.getElementById('getJointsBtn').addEventListener('click', async () => {
+      if (busy) return;
+      setBusy(true, '获取关节中...');
+      try {
+        const data = await requestJson(`/api/status?arm=${encodeURIComponent(currentArm)}`);
+        renderState(data);
+        const joints = (data.joints || []);
+        const readout = document.getElementById('jointsReadout');
+        if (joints.length) {
+          readout.textContent = formatJoints(joints);
+          searchResultBox.textContent = `已获取 ${joints.length} 个关节角度`;
+        } else {
+          readout.textContent = '未获取到关节数据';
+          searchResultBox.textContent = '未获取到关节数据';
+        }
+      } finally {
+        setBusy(false);
+      }
+    });
+    document.getElementById('copyJointsBtn').addEventListener('click', async () => {
+      if (busy) return;
+      if (!window.currentJoints || !window.currentJoints.length) {
+        await refreshState();
+      }
+      const text = window.currentJoints.map(v => Number(v).toFixed(5)).join(', ');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        searchResultBox.textContent = `已复制关节角度: ${text}`;
+      } else {
+        searchResultBox.textContent = `当前关节角度: ${text}`;
+      }
+    });
+    document.getElementById('refreshDirBtn').addEventListener('click', () => loadDirectory(currentDir));
+    document.getElementById('dockerSelect').addEventListener('change', async (e) => {
+      currentContainer = e.target.value;
+      localStorage.setItem('arm_docker_container', currentContainer);
+      renderContainerState();
+      loadDirectory(currentDir);
+      await loadActionOptions();
+      loadActionList();
+      // 若已载入动作，则按新容器重新读取参数值，保证全局生效
+      if (currentActionId) {
+        loadApproach();
+      }
+    });
+    document.getElementById('refreshDockerBtn').addEventListener('click', loadDockerContainers);
+    document.getElementById('loadApproachBtn').addEventListener('click', async () => {
+      const ok = await loadApproach();
+      if (ok) {
+        applyActionPause(currentActionId);
+      }
+    });
+    document.getElementById('refreshActionsBtn').addEventListener('click', async () => {
+      await loadActionOptions();
+      await loadActionList();
+    });
+    document.getElementById('saveApproachBtn').addEventListener('click', saveApproach);
+    document.getElementById('addActionBtn').addEventListener('click', () => {
+      // 弹窗内分组下拉复用动作树
+      const select = document.getElementById('newActionGroup');
+      const prev = select.value;
+      select.replaceChildren();
+      actionTree.forEach((dev, mi) => (dev.stages || []).forEach((grp, gi) => {
+        const opt = document.createElement('option');
+        opt.value = `${mi}_${gi}`;
+        opt.textContent = `${dev.label || ''} / ${grp.label || ''}`;
+        select.appendChild(opt);
+      }));
+      if (prev && [...select.options].some(o => o.value === prev)) {
+        select.value = prev;
+      }
+      loadActionList();
+      document.getElementById('actionModal').style.display = 'flex';
+    });
+    document.getElementById('actionModalAddBtn').addEventListener('click', addAction);
+    document.getElementById('actionModalCloseBtn').addEventListener('click', () => {
+      document.getElementById('actionModal').style.display = 'none';
+    });
+    document.getElementById('actionModal').addEventListener('click', (event) => {
+      if (event.target === document.getElementById('actionModal')) {
+        document.getElementById('actionModal').style.display = 'none';
+      }
+    });
+    document.getElementById('actionSelect').addEventListener('change', () => {
+      currentActionId = document.getElementById('actionSelect').value;
+      localStorage.setItem('arm_action_id', currentActionId);
+    });
+    document.getElementById('actionGroupSelect').addEventListener('change', () => {
+      const key = document.getElementById('actionGroupSelect').value;
+      const [mi, gi] = (key || '_').split('_').map(Number);
+      const dev = actionTree[mi];
+      const grp = dev && dev.stages ? dev.stages[gi] : null;
+      const stable = (dev && grp) ? `${dev.id}::${grp.label}` : key;
+      localStorage.setItem('arm_action_group', stable);
+      fillActionSelect();
+    });
+    document.getElementById('fillPoseBtn').addEventListener('click', fillPose);
+    document.getElementById('addWaypointBtn').addEventListener('click', () => {
+      currentRows.push(Array(actionValueCount()).fill(0));
+      renderWaypoints(currentRows);
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', closeFilePreview);
+    document.getElementById('saveModalBtn').addEventListener('click', async () => {
+      if (!activeModalPath) {
+        return;
+      }
+      const data = await requestJson('/api/config/save-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: activeModalPath, content: modalEditor.value, container: containerParam() })
+      });
+      searchResultBox.textContent = data.ok ? `已保存文件: ${activeModalPath}` : `保存失败: ${data.error}`;
+      if (data.ok) {
+        closeFilePreview();
+      }
+    });
+    modalBackdrop.addEventListener('click', (event) => {
+      if (event.target === modalBackdrop) {
+        closeFilePreview();
+      }
+    });
+    document.getElementById('warnCloseBtn').addEventListener('click', () => {
+      document.getElementById('warnModal').style.display = 'none';
+    });
+    document.getElementById('warnModal').addEventListener('click', (event) => {
+      if (event.target === document.getElementById('warnModal')) {
+        document.getElementById('warnModal').style.display = 'none';
+      }
+    });
+    document.getElementById('openDirBtn').addEventListener('click', () => loadDirectory(document.getElementById('dirPathInput').value));
+    document.getElementById('backDirBtn').addEventListener('click', () => {
+      const parent = currentDir.split('/').filter(Boolean);
+      if (parent.length <= 1) {
+        loadDirectory('/root/AlphaBrainSystem/configs/behavior/COFFEE');
+      } else {
+        const newPath = '/' + parent.slice(0, -1).join('/');
+        loadDirectory(newPath);
+      }
+    });
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const result = await requestJson('/api/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ arm: currentArm })
+        });
+        renderState(result.state);
+      } finally { setBusy(false); }
+    });
+    document.getElementById('stopBtn').addEventListener('click', async () => {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const result = await requestJson('/api/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ arm: currentArm })
+        });
+        renderState(result.state);
+      } finally { setBusy(false); }
+    });
+
+    document.addEventListener('keydown', async (event) => {
+      const key = event.key.toLowerCase();
+      if (busy) { event.preventDefault(); return; }
+      if (key === 'r') {
+        const result = await requestJson('/api/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ arm: currentArm }) });
+        renderState(result.state);
+        event.preventDefault();
+        return;
+      }
+      if (key === 'f') {
+        await refreshState();
+        event.preventDefault();
+        return;
+      }
+      if (key === ' ') {
+        const result = await requestJson('/api/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ arm: currentArm })
+        });
+        renderState(result.state);
+        event.preventDefault();
+        return;
+      }
+      // 物理键盘按键跟随当前选中的机械臂（左臂/右臂各自的绑定）
+      const bind = (ARM_BINDINGS[currentArm] || ARM_BINDINGS.left)[key];
+      if (bind) {
+        const d = labelToProtocol(offsetForAxis(bind.axis, bind.dir));
+        await moveArm(d.dx, d.dy, d.dz, currentSpeed());
+        event.preventDefault();
+      }
+    });
+
+    refreshState();
+    loadDockerContainers().then(() => {
+      loadDirectory(currentDir);
+      loadActionOptions();
+      loadActionList();
+    });
+  </script>
+</body>
+</html>
