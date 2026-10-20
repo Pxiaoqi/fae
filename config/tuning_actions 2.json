@@ -1,0 +1,88 @@
+{
+  "coffee": {
+    "label": "咖啡机",
+    "stages": {
+      "取杯准备": [
+        {"action": "取杯器按键动作（按键）", "node": "move_left_arm_to_press_cup_popper_button_B", "param": "approach_distance"},
+        {"action": "取杯器左手动作（抓杯前回退）", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_B", "param": "approach_distance"},
+        {"action": "取杯器左手动作（抓杯）", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_B", "param": "approach_distance"},
+        {"action": "取杯器左手动作（抓杯返回）", "node": "move_left_arm_back_from_cup_popper", "param": "left"}
+      ],
+      "咖啡制作": [
+        {"action": "咖啡机左手动作（放杯子）", "node": "move_left_arm_to_place_cup_B", "param": "approach_distance"},
+        {"action": "咖啡机右手动作（按键/回撤）", "node": "move_left_arm_back_from_coffee_machine_B_with_right_hands_press", "param": "approach_distance"},
+        {"action": "咖啡机左手动作（抓杯）", "node": "move_left_arm_to_fetch_cup_with_coffee_B", "param": "approach_distance"}
+      ],
+      "出餐交付": [
+        {"action": "左手送餐预备位", "node": "move_left_arm_to_pre_send_meal_B", "param": "left"},
+        {"action": "送餐返回", "node": "move_left_arm_back_from_send_meal", "param": "left"}
+      ]
+    }
+  },
+  "ice_cream": {
+    "label": "冰淇淋机",
+    "stages": {
+      "取杯准备": [
+        {"action": "取杯器左手动作（按键）", "node": "move_left_arm_to_press_cup_popper_button_C", "param": "approach_distance"},
+        {"action": "左手动作去抓杯", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_C", "param": "approach_distance"},
+        {"action": "抓杯前回退", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_C", "param": "approach_distance"},
+        {"action": "抓杯返回", "node": "move_left_arm_back_from_cup_popper", "param": "left"}
+      ],
+      "冰淇淋制作": [
+        {"action": "左手预备放置位置", "node": "two_arm_pre_pull_icecream_handle", "param": "approach_distance"},
+        {"action": "右手拉杆放置位置", "node": "two_arm_pre_pull_icecream_handle", "param": "approach_distance"},
+        {"action": "左手转圈圈数", "node": "move_with_arc", "param": "num_revolutions"},
+        {"action": "左手上顶断冰淇淋距离", "node": "move_with_arc_back", "param": "left"},
+        {"action": "左手下压断冰淇淋距离", "node": "move_with_arc_back", "param": "left"}
+      ],
+      "出餐交付": [
+        {"action": "送餐预备位", "node": "move_left_arm_to_pre_send_meal_C", "param": "left"},
+        {"action": "送餐返回", "node": "move_left_arm_back_from_send_meal_C", "param": "left"}
+      ]
+    }
+  },
+  "new_ice_cream": {
+    "label": "新冰淇淋机",
+    "stages": {
+      "取杯准备": [
+        {"action": "取杯器左手动作（按键）", "node": "move_left_arm_to_press_cup_popper_button_D", "param": "approach_distance"},
+        {"action": "取杯器按键动作（返回）", "node": "move_left_arm_to_press_cup_popper_button_back_C", "param": "approach_distance"},
+        {"action": "抓杯前回退", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_D", "param": "approach_distance"},
+        {"action": "左手动作去抓杯", "node": "move_left_arm_back_open_then_fetch_cup_from_cup_popper_D", "param": "approach_distance"},
+        {"action": "抓杯返回", "node": "move_left_arm_back_from_cup_popper", "param": "left"}
+      ],
+      "冰淇淋制作": [
+        {"action": "左手预备放置位置", "node": "two_arm_pre_pull_icecream_handle_B", "param": "approach_distance"},
+        {"action": "右手拉杆放置位置", "node": "two_arm_pre_pull_icecream_handle_B", "param": "approach_distance"},
+        {"action": "左手转圈圈数", "node": "move_with_arc_B", "param": "num_revolutions"},
+        {"action": "左手上顶断冰淇淋距离", "node": "move_with_arc_back_B", "param": "left"},
+        {"action": "左手下压断冰淇淋距离", "node": "move_with_arc_back_B", "param": "left"}
+      ],
+      "出餐交付": [
+        {"action": "送餐预备位", "node": "move_left_arm_to_pre_send_meal_C", "param": "left"},
+        {"action": "送餐返回", "node": "move_left_arm_back_from_send_meal_C", "param": "left"}
+      ]
+    }
+  },
+  "beer": {
+    "label": "啤酒机",
+    "stages": {
+      "取杯准备": [
+        {"action": "取杯器左手动作（按键）", "node": "move_left_arm_to_press_cup_popper_button_E", "param": "approach_distance"},
+        {"action": "取杯器按键动作（返回）", "node": "move_left_arm_to_press_cup_popper_button_back_C", "param": "approach_distance"},
+        {"action": "左手动作去抓杯", "node": "move_left_arm_to_fetch_cup_from_cup_popper_E", "param": "approach_distance"},
+        {"action": "抓杯返回", "node": "move_left_arm_back_from_cup_popper_E", "param": "left"}
+      ],
+      "啤酒出杯": [
+        {"action": "左手拉杆预备位置", "node": "two_arm_pre_pull_beer_machine_handle_E", "param": "approach_distance"},
+        {"action": "右手拉杆预备位置", "node": "two_arm_pre_pull_beer_machine_handle_E", "param": "approach_distance"},
+        {"action": "右手出酒后回收", "node": "arm_return_after_beer", "param": "right"},
+        {"action": "左手出酒后回收", "node": "arm_return_after_beer", "param": "left"}
+      ],
+      "出餐交付": [
+        {"action": "送餐预备位", "node": "move_left_arm_to_pre_send_meal_C", "param": "left"},
+        {"action": "送餐返回", "node": "move_left_arm_back_from_send_meal_C", "param": "left"}
+      ]
+    }
+  }
+}

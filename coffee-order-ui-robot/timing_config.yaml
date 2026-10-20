@@ -1,0 +1,53 @@
+# ============================================================
+# 订单制作时长监听配置（只读 cerebrum.log，不改容器代码）
+# 口径：从"转身开始制作订单"到"送餐张开夹爪"两个动作节点
+# 定位方式：path 为可动态增删的路径层级（精确段、按顺序匹配组件路径）；
+#   path 留空时程序自动从 TEMPLATE-*.yaml 解析节点嵌套位置
+# ============================================================
+
+enabled: true
+
+# cerebrum.log 时间桶目录（v2.2.5 日志方案：logger/<日期>/<时-分>/cerebrum/cerebrum.log）
+log_glob: "/root/AlphaBrainSystem/logger/*/*/cerebrum/cerebrum.log"
+
+# 行为树模板目录（path 留空时程序据此自动定位）
+template_dir: "/root/AlphaBrainSystem/configs/behavior/COFFEE"
+
+# 历史回补：启动时扫描最近 N 天的日志补算（与日志保留期 14 天一致）
+backfill_days: 14
+
+# 起点节点（转腰开始）：
+#   path     : 可动态增删的路径层级（精确段），留空=程序自动定位
+#   node_name: 实际监听的动作节点（前缀匹配，兼容编号后缀）
+#   template : 可选备注
+start:
+  template: ""
+  path:
+    - "manip_cup_popper_F"
+  node_name: "move_torso_to_cup_popper_default_F"
+  event: MOTION_COMMAND_SENT
+  after_event: ORDER_SELECTED
+
+# 终点节点（送餐张爪）：
+#   当前真实路径含 send_meal_F_tts/send_meal_F 两级，
+#   填两层可避免误匹配 send_meal_F_tts/shake_spic* 里的张开夹爪
+end:
+  template: ""
+  path:
+    - "send_meal_F_tts"
+    - "send_meal_F"
+  node_name: "move_left_gripper_to_open"
+  event: MOTION_COMMAND_SENT
+
+# 订单闭环判定文件（v2.2.5）
+closed_orders_file: "/root/AlphaBrainSystem/local/mqtt_closed_orders.txt"
+active_orders_file: "/root/AlphaBrainSystem/local/mqtt_orders.txt"
+
+# 视为失败的终态状态（订单未闭环且消失也判失败）
+failed_statuses: ["failed", "cancelled", "auto_cancelled", "cancel"]
+
+# 单笔时长超过该值标记为可疑（默认 1 小时），不计入平均
+max_duration_sec: 3600
+
+# 轮询间隔（秒）
+poll_sec: 2

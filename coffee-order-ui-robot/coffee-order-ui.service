@@ -1,0 +1,16 @@
+[Unit]
+Description=Coffee Order UI (host bridge mode)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/coffee-order-ui
+ExecStart=/usr/bin/python3 /opt/coffee-order-ui/server.py
+Environment=COFFEE_CONTAINER=coffee-v2.2.5
+Environment=COFFEE_UI_PORT=8077
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

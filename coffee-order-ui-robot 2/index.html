@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fffaf5">
+  <title>智魔方点单系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1 id="brandTitle">🤖 智魔方点单系统</h1>
+      <p>点击饮品即可下单 · 系统自动制作</p>
+    </div>
+    <div class="top-right">
+      <div class="status" id="status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">检测中</span>
+      </div>
+      <button class="today-btn" id="todayBtn" type="button">📋 今日订单</button>
+      <button class="pure-btn" id="pureBtn" type="button" title="纯净点单模式">⛶</button>
+      <button class="edit-btn" id="editBtn" type="button">⚙ 编辑</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid" id="grid" aria-label="饮品菜单"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>待制作订单 <span class="live-dot" title="实时同步订单状态"></span></h2>
+        <button class="clear-btn" id="clearPendingBtn" type="button">一键清除未制作</button>
+      </div>
+      <ul class="orders pending-orders" id="pendingOrders">
+        <li class="empty">暂无待制作订单</li>
+      </ul>
+    </section>
+  </main>
+
+  <div class="modal-mask" id="modalMask" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="m-head">
+        <h2 id="modalTitle">编辑模块与饮品绑定</h2>
+        <button class="m-close" id="mClose" type="button" aria-label="关闭">×</button>
+      </div>
+      <p class="m-tip">选择左侧模块，勾选该模块可下单的饮品，保存后立即生效。</p>
+      <div class="editor-tabs">
+        <button type="button" class="editor-tab active" id="tabMenu">菜单设置</button>
+        <button type="button" class="editor-tab" id="tabTiming">制作时长监听</button>
+      </div>
+      <div class="editor-pane" id="paneMenu">
+        <div class="m-body">
+          <div class="m-cats" id="mCats"></div>
+          <div class="m-right">
+            <div class="m-layout">
+              <span>宫格布局：</span>
+              <label><input type="radio" name="mLayout" value="4x2"> 4×2</label>
+              <label><input type="radio" name="mLayout" value="6x2"> 6×2</label>
+            </div>
+            <ul class="m-drinks" id="mDrinks"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="editor-pane" id="paneTiming" hidden>
+        <div class="timing-section" id="timingSection" hidden>
+          <div class="m-sep"></div>
+          <div class="m-subhead">制作时长监听（容器内可用）</div>
+          <div class="m-layout timing-switch-row">
+            <label class="switch" title="制作时长监听开关">
+              <input type="checkbox" id="timingSwitch">
+              <span class="slider"></span>
+            </label>
+            <span class="timing-switch-label" id="timingSwitchLabel">开启</span>
+          </div>
+          <div class="timing-rules" id="timingRules" hidden>
+            <div class="rule-group">起点（转腰开始）</div>
+            <div class="rule-row"><label>模板</label><input id="startTemplate" type="text" placeholder="manip_cup_popper_F"></div>
+            <div class="rule-path" id="startPath"></div>
+            <button class="path-add" id="startPathAdd" type="button">+ 路径层级</button>
+            <div class="rule-row"><label>节点</label><input id="startNode" type="text" placeholder="move_torso_to_cup_popper_default_F"></div>
+            <div class="rule-resolved" id="startResolved"></div>
+            <div class="rule-group">终点（送餐张爪）</div>
+            <div class="rule-row"><label>模板</label><input id="endTemplate" type="text" placeholder="send_meal_F"></div>
+            <div class="rule-path" id="endPath"></div>
+            <button class="path-add" id="endPathAdd" type="button">+ 路径层级</button>
+            <div class="rule-row"><label>节点</label><input id="endNode" type="text" placeholder="move_left_gripper_to_open"></div>
+            <div class="rule-resolved" id="endResolved"></div>
+            <button class="rule-save" id="ruleSave" type="button">保存规则</button>
+          </div>
+        </div>
+      </div>
+      <div class="m-actions">
+        <button type="button" id="mCancel">取消</button>
+        <button type="button" id="mSave" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="drinkEditMask" hidden>
+    <div class="modal drink-edit-modal">
+      <div class="m-head">
+        <h2 id="drinkEditTitle">编辑饮品</h2>
+        <button class="m-close" id="drinkEditClose" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="drink-edit-body">
+        <div class="rule-group">标签（可动态增删；含"含酒精"即显示酒精提示）</div>
+        <div class="tag-editor" id="drinkTags"></div>
+        <button class="path-add" id="drinkTagAdd" type="button">+ 标签</button>
+        <div class="rule-row"><label>提示词</label><input id="drinkHint" type="text" placeholder="例如：半杯 / 含酒精请留意"></div>
+        <div class="m-sep"></div>
+        <div class="m-subhead">禁止下单（如缺货）</div>
+        <div class="rule-row">
+          <label class="switch" title="禁止下单">
+            <input type="checkbox" id="drinkDisabled">
+            <span class="slider"></span>
+          </label>
+          <span class="timing-switch-label" id="drinkDisabledLabel">可下单</span>
+        </div>
+      </div>
+      <div class="m-actions">
+        <button type="button" id="drinkEditCancel">取消</button>
+        <button type="button" id="drinkEditSave" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <button class="pure-exit" id="pureExit" type="button">退出纯净模式</button>
+
+  <div class="drawer-mask" id="drawerMask" hidden></div>
+  <aside class="drawer" id="todayDrawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>📋 今日订单</h2>
+      <button class="m-close" id="drawerClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <p class="drawer-date" id="drawerDate"></p>
+    <div class="drawer-total">
+      <span class="drawer-total-num" id="drawerTotal">0</span>
+      <span class="drawer-total-label">笔订单</span>
+    </div>
+    <ul class="drawer-orders" id="drawerOrders">
+      <li class="empty">今日还没有订单</li>
+    </ul>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>

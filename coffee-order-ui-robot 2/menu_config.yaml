@@ -1,0 +1,77 @@
+# ============================================================
+# 智魔方点单系统 · 点单菜单配置
+# 定义 TEMPLATE-X.yaml 与点单分类(tab)的绑定，以及各分类绑定的饮品。
+# 点单页面启动时会读取容器内 PIPELINE.yaml，动态生成分类与饮品。
+# ============================================================
+
+# categories: 点单页 tab 分类
+#   id         分类标识
+#   name       tab 显示名
+#   icon       tab 图标（emoji）
+#   check_node INTERFACES.yaml 中该分类的校验节点，其 target_values
+#              即该分类可制作的饮品（与 task_mapping 的 type 对应）
+#   templates  该分类绑定的 TEMPLATE-*.yaml；只有出现在 PIPELINE.yaml
+#              behavior_tree_template_files 中的模板才会启用该分类
+#   color      卡片默认渐变色系（grad-<color>）
+#   layout     点单宫格布局：4x2 或 6x2
+#   title      分类标题（默认取 name，例如"咖啡"）
+categories:
+  - id: coffee
+    name: 咖啡
+    icon: ☕
+    check_node: check_coffee_task
+    templates:
+      - TEMPLATE-A.yaml
+      - TEMPLATE-B.yaml
+    color: coffee
+    layout: 6x2
+    # 咖啡分类内部按品类配色区分（type -> 分组）
+    color_groups:
+      coffee: {name: "黑咖", types: [1, 2, 10]}          # 意式浓缩/美式/冰美式
+      latte:  {name: "奶咖", types: [3, 4, 5, 6, 8, 9, 11]} # 拿铁/玛奇朵/卡布/牛奶/冰系列
+      water:  {name: "清水", types: [12, 13]}            # 热水/常温水
+
+  - id: icecream
+    name: 冰激凌
+    icon: 🍦
+    check_node: check_icecream_task
+    templates:
+      - TEMPLATE-C.yaml
+      - TEMPLATE-D.yaml
+    color: icecream
+    layout: 4x2
+
+  - id: beer
+    name: 啤酒
+    icon: 🍺
+    check_node: check_beer_task
+    templates:
+      - TEMPLATE-E.yaml
+      - TEMPLATE-E-LKF.yaml
+    color: beer
+    layout: 4x2
+
+  - id: cocktail
+    name: 鸡尾酒
+    icon: 🍸
+    check_node: check_cocktail_task
+    templates:
+      - TEMPLATE-F.yaml
+    color: cocktail
+    layout: 4x2
+
+# PIPELINE.yaml 的 active_behavior_tree -> 默认选中的分类
+behavior_trees:
+  RobotA: coffee
+  RobotB: coffee
+  RobotC: icecream
+  RobotD: icecream
+  RobotE: beer
+  RobotE_LKF: beer
+  RobotF: cocktail
+
+# 默认点单模块：按 robot_profile 的 robot.id 决定（优先于 behavior_trees）
+# 可选：按 robot_profile 的 robot.id 限制可见分类。
+# 例如只对 Robot2_Alpha 显示咖啡和鸡尾酒：
+# robots:
+#   Robot2_Alpha: [coffee, cocktail]
